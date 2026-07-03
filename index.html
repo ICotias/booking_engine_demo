@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Demonstração de Booking Engine (Motor de Reservas) | ClickWave</title>
+<style>
+  :root {
+    /* Paleta: marrom escuro sobre bege amarelado, hotel de luxo */
+    --verde: #3d2c1d;          /* marrom escuro (cor primária) */
+    --verde-claro: #5c4530;    /* marrom médio */
+    --dourado: #c2a15c;        /* dourado envelhecido */
+    --areia: #f5eeda;          /* bege puxado para o amarelo (fundo) */
+    --branco: #fffdf6;         /* branco quente (cartões) */
+    --texto: #2b2115;
+    --cinza: #8a7c64;
+    --erro: #a8503f;
+    --ok: #5f7a4a;
+    --borda: #e9dfc6;
+    --sombra: 0 2px 8px rgba(61, 44, 29, 0.05), 0 12px 32px rgba(61, 44, 29, 0.07);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    background: var(--areia); color: var(--texto); line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  header {
+    background: linear-gradient(180deg, #2c2013 0%, #3d2c1d 100%);
+    color: var(--areia);
+    padding: 48px 20px 30px; text-align: center;
+  }
+  header h1 {
+    font-size: 34px; font-weight: 700; letter-spacing: -0.022em;
+    color: #f5eeda;
+  }
+  header h1 span { color: var(--dourado); }
+  header p {
+    color: #cbb893; font-size: 15px; margin-top: 8px;
+    max-width: 640px; margin-left: auto; margin-right: auto;
+    letter-spacing: -0.01em;
+  }
+  nav {
+    display: inline-flex; justify-content: center; gap: 2px;
+    margin-top: 26px; flex-wrap: wrap;
+    background: rgba(245, 238, 218, 0.10);
+    border: 1px solid rgba(245, 238, 218, 0.14);
+    border-radius: 999px; padding: 4px;
+  }
+  nav button {
+    background: transparent; color: #d9cba6; border: none;
+    padding: 9px 18px; font-size: 14px; cursor: pointer;
+    border-radius: 999px; font-family: inherit; font-weight: 500;
+    letter-spacing: -0.01em; transition: background 0.2s, color 0.2s;
+  }
+  nav button:hover { color: #f5eeda; }
+  nav button.ativo { background: var(--areia); color: var(--verde); font-weight: 600; }
+  main { max-width: 1060px; margin: 0 auto; padding: 36px 16px 60px; }
+  .painel { display: none; }
+  .painel.ativo { display: block; }
+  .card {
+    background: var(--branco); border-radius: 20px; box-shadow: var(--sombra);
+    padding: 28px; margin-bottom: 24px; border: 1px solid var(--borda);
+  }
+  h2 { font-size: 21px; color: var(--verde); margin-bottom: 14px; font-weight: 700; letter-spacing: -0.02em; }
+  h3 { font-size: 16px; color: var(--verde-claro); margin: 14px 0 8px; font-weight: 600; letter-spacing: -0.01em; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 720px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--cinza); }
+  input, select {
+    width: 100%; padding: 11px 14px; border: 1px solid var(--borda);
+    border-radius: 12px; font-size: 15px; font-family: inherit; background: #fffef9;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input:focus, select:focus {
+    outline: none; border-color: var(--dourado);
+    box-shadow: 0 0 0 3.5px rgba(194, 161, 92, 0.25);
+  }
+  .campo { margin-bottom: 14px; }
+  .msg-erro { color: var(--erro); font-size: 12.5px; margin-top: 4px; display: none; }
+  .campo.invalido input { border-color: var(--erro); }
+  .campo.invalido .msg-erro { display: block; }
+  .contador { font-size: 12px; color: var(--cinza); text-align: right; margin-top: 3px; }
+  .btn {
+    background: var(--verde); color: var(--areia); border: none; padding: 12px 26px;
+    font-size: 15px; border-radius: 999px; cursor: pointer; font-family: inherit;
+    font-weight: 600; letter-spacing: -0.01em;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .btn:hover { background: var(--verde-claro); }
+  .btn:active { transform: scale(0.98); }
+  .btn.secundario { background: transparent; color: var(--verde); border: 1.5px solid #d4c6a4; }
+  .btn.secundario:hover { background: rgba(61, 44, 29, 0.06); }
+  .btn.dourado { background: var(--dourado); color: #2c2013; }
+  .btn.dourado:hover { background: #b3924e; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .quarto-card {
+    border: 1px solid var(--borda); border-radius: 16px; padding: 20px;
+    display: flex; flex-direction: column; gap: 8px; background: #fffef9;
+  }
+  .quarto-card.esgotado { opacity: 0.55; }
+  .quarto-card h3 { margin: 0; font-size: 17px; }
+  .preco-noite { font-size: 13px; color: var(--cinza); }
+  .total-linha { display: flex; justify-content: space-between; font-size: 14px; padding: 3px 0; }
+  .total-linha.destaque { font-weight: 700; font-size: 16px; border-top: 1px solid var(--borda); margin-top: 6px; padding-top: 8px; color: var(--verde); }
+  .tag { display: inline-block; font-size: 11.5px; padding: 2px 9px; border-radius: 20px; font-weight: 600; }
+  .tag.fds { background: #ede8d2; color: #6e6224; }
+  .tag.feriado { background: #f2e3c3; color: #8a5f18; }
+  .tag.comum { background: #efe9d8; color: var(--cinza); }
+  .tag.ok { background: #e5ebd8; color: #4d6339; }
+  .tag.cheio { background: #f2ddd6; color: var(--erro); }
+  .passos { display: flex; gap: 8px; margin-bottom: 22px; flex-wrap: wrap; }
+  .passo-chip {
+    font-size: 13px; padding: 6px 14px; border-radius: 999px;
+    background: #ece5cf; color: var(--cinza);
+  }
+  .passo-chip.atual { background: var(--verde); color: var(--areia); font-weight: 600; }
+  .passo-chip.feito { background: #ddd0ab; color: var(--verde); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; padding: 10px 12px; background: var(--verde); color: var(--areia); font-weight: 600; }
+  th:first-child { border-radius: 10px 0 0 0; }
+  th:last-child { border-radius: 0 10px 0 0; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--borda); }
+  tr:nth-child(even) td { background: #faf5e8; }
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+  .cal-dow { font-size: 11.5px; font-weight: 700; color: var(--cinza); text-align: center; padding: 4px 0; }
+  .cal-dia {
+    border: 1px solid var(--borda); border-radius: 10px; min-height: 64px;
+    padding: 5px 6px; font-size: 12px; background: #fffef9;
+  }
+  .cal-dia .num { font-weight: 700; font-size: 13px; }
+  .cal-dia.fora { background: transparent; border: none; }
+  .cal-dia.hoje { outline: 2px solid var(--dourado); }
+  .cal-dia .disp { margin-top: 3px; line-height: 1.35; }
+  .disp-item { display: block; }
+  .disp-item.zero { color: var(--erro); font-weight: 700; }
+  .log-box {
+    background: #251a0e; color: #ede2c4; border-radius: 16px; padding: 18px;
+    font-family: "SF Mono", "Menlo", "Consolas", monospace; font-size: 13.5px;
+    min-height: 240px; white-space: pre-wrap; line-height: 1.7;
+  }
+  .log-box .la { color: #c9b57f; }
+  .log-box .lb { color: #e3c377; }
+  .log-box .lerr { color: #eb9d8d; font-weight: 700; }
+  .log-box .lok { color: #b3cf8e; font-weight: 700; }
+  .confirmacao {
+    text-align: center; padding: 30px 20px;
+  }
+  .confirmacao .icone { font-size: 52px; }
+  .localizador {
+    font-family: "SF Mono", "Menlo", "Consolas", monospace; font-size: 26px; letter-spacing: 3px;
+    background: var(--areia); border: 2px dashed var(--dourado);
+    display: inline-block; padding: 10px 26px; border-radius: 14px; margin: 14px 0;
+    color: var(--verde); font-weight: 700;
+  }
+  .pix-box {
+    text-align: center; border: 1px solid var(--borda); border-radius: 16px; padding: 20px;
+    background: #fffef9;
+  }
+  .pix-qr {
+    width: 150px; height: 150px; margin: 12px auto; display: grid;
+    grid-template-columns: repeat(12, 1fr); border: 8px solid #fff;
+    outline: 1px solid var(--borda);
+  }
+  .pix-qr i { display: block; }
+  .pix-qr i.p { background: #2a2014; }
+  .aviso {
+    background: #f4ecd6; border-left: 4px solid var(--dourado); padding: 13px 16px;
+    border-radius: 0 12px 12px 0; font-size: 14px; margin: 14px 0;
+  }
+  .modo-card { cursor: pointer; transition: outline 0.15s, background 0.15s; }
+  .modo-card:hover { border-color: var(--verde-claro); }
+  .modo-card.sel { border-color: var(--verde); outline: 2px solid var(--verde); background: #f6f0dd; }
+  .modo-card .titulo-modo { font-weight: 700; color: var(--verde); font-size: 15px; }
+  .sync-info { font-size: 13px; color: var(--cinza); margin-top: 8px; }
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--verde); color: var(--areia); padding: 13px 26px; border-radius: 999px;
+    box-shadow: var(--sombra); font-size: 14.5px; opacity: 0; pointer-events: none;
+    transition: opacity 0.3s; z-index: 50; max-width: 90vw; text-align: center;
+  }
+  .toast.erro { background: var(--erro); }
+  .toast.visivel { opacity: 1; }
+  footer { text-align: center; color: var(--cinza); font-size: 12.5px; padding: 20px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Demonstração de <span>Booking Engine</span></h1>
+  <p>Motor de reservas para hotéis: tarifas dinâmicas, pagamento direto e proteção contra overbooking. Hotel Horizonte é a propriedade fictícia da demonstração.</p>
+  <nav>
+    <button id="tab-btn-reserva" class="ativo" onclick="trocarAba('reserva')">Reservar (hóspede)</button>
+    <button id="tab-btn-admin" onclick="trocarAba('admin')">Painel do hotel</button>
+    <button id="tab-btn-overbooking" onclick="trocarAba('overbooking')">Prevenção de overbooking</button>
+    <button id="tab-btn-canais" onclick="trocarAba('canais')">Canais e OTAs</button>
+  </nav>
+</header>
+
+<main>
+
+<!-- ============ ABA: HÓSPEDE ============ -->
+<section id="painel-reserva" class="painel ativo">
+  <div class="passos" id="passos"></div>
+
+  <!-- Passo 1: datas -->
+  <div class="card" id="etapa-datas">
+    <h2>1. Escolha as datas da sua estadia</h2>
+    <div class="grid3">
+      <div class="campo">
+        <label for="inp-checkin">Check-in</label>
+        <input type="date" id="inp-checkin" />
+        <div class="msg-erro">Escolha uma data a partir de hoje.</div>
+      </div>
+      <div class="campo">
+        <label for="inp-checkout">Check-out</label>
+        <input type="date" id="inp-checkout" />
+        <div class="msg-erro">O check-out precisa ser depois do check-in.</div>
+      </div>
+      <div class="campo">
+        <label for="inp-hospedes">Hóspedes</label>
+        <select id="inp-hospedes">
+          <option value="1">1 hóspede</option>
+          <option value="2" selected>2 hóspedes</option>
+          <option value="3">3 hóspedes</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn" onclick="buscarQuartos()">Ver quartos disponíveis</button>
+  </div>
+
+  <!-- Passo 2: quartos -->
+  <div class="card" id="etapa-quartos" style="display:none">
+    <h2>2. Escolha o quarto</h2>
+    <p id="resumo-busca" style="font-size:14px;color:var(--cinza);margin-bottom:14px"></p>
+    <div class="grid2" id="lista-quartos"></div>
+    <div style="margin-top:16px">
+      <button class="btn secundario" onclick="voltarPara('datas')">Voltar</button>
+    </div>
+  </div>
+
+  <!-- Passo 3: dados do hóspede -->
+  <div class="card" id="etapa-dados" style="display:none">
+    <h2>3. Seus dados</h2>
+    <div class="grid2">
+      <div class="campo" id="campo-nome">
+        <label for="inp-nome">Nome completo</label>
+        <input type="text" id="inp-nome" placeholder="Maria da Silva" autocomplete="name" />
+        <div class="msg-erro">Informe nome e sobrenome, apenas letras.</div>
+      </div>
+      <div class="campo" id="campo-telefone">
+        <label for="inp-telefone">Telefone / WhatsApp</label>
+        <input type="tel" id="inp-telefone" placeholder="(74) 99999-9999" inputmode="tel" autocomplete="tel" maxlength="15" />
+        <div class="msg-erro">Informe um telefone válido com DDD (10 ou 11 dígitos).</div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="campo" id="campo-email">
+        <label for="inp-email">E-mail</label>
+        <input type="email" id="inp-email" placeholder="maria@email.com" inputmode="email" autocomplete="email" />
+        <div class="msg-erro">Informe um e-mail válido.</div>
+      </div>
+      <div class="campo" id="campo-obs">
+        <label for="inp-obs">Observações (opcional)</label>
+        <input type="text" id="inp-obs" maxlength="140" placeholder="Chegada após as 22h, berço, etc." />
+        <div class="contador" id="obs-contador">0/140</div>
+      </div>
+    </div>
+    <div class="aviso" id="resumo-pre-pagamento"></div>
+    <button class="btn secundario" onclick="voltarPara('quartos')">Voltar</button>
+    <button class="btn" onclick="irParaPagamento()">Ir para o pagamento</button>
+  </div>
+
+  <!-- Passo 4: pagamento -->
+  <div class="card" id="etapa-pagamento" style="display:none">
+    <h2>4. Pagamento</h2>
+    <div class="grid2">
+      <div>
+        <h3>Resumo da reserva</h3>
+        <div id="resumo-pagamento"></div>
+      </div>
+      <div>
+        <h3>Forma de pagamento</h3>
+        <div class="campo">
+          <select id="inp-pagamento" onchange="alternarPagamento()">
+            <option value="pix">Pix (confirmação imediata)</option>
+            <option value="cartao">Cartão de crédito</option>
+          </select>
+        </div>
+        <div id="bloco-pix" class="pix-box">
+          <strong>Pague com Pix</strong>
+          <div class="pix-qr" id="pix-qr"></div>
+          <p style="font-size:13px;color:var(--cinza)">Escaneie com o app do seu banco. O QR Code expira em 15 minutos.</p>
+        </div>
+        <div id="bloco-cartao" style="display:none">
+          <div class="campo" id="campo-cartao">
+            <label for="inp-cartao">Número do cartão</label>
+            <input type="text" id="inp-cartao" placeholder="0000 0000 0000 0000" inputmode="numeric" maxlength="19" />
+            <div class="msg-erro">Informe os 16 dígitos do cartão.</div>
+          </div>
+          <div class="grid2">
+            <div class="campo" id="campo-validade">
+              <label for="inp-validade">Validade</label>
+              <input type="text" id="inp-validade" placeholder="MM/AA" inputmode="numeric" maxlength="5" />
+              <div class="msg-erro">Use o formato MM/AA, com data futura.</div>
+            </div>
+            <div class="campo" id="campo-cvv">
+              <label for="inp-cvv">CVV</label>
+              <input type="text" id="inp-cvv" placeholder="123" inputmode="numeric" maxlength="4" />
+              <div class="msg-erro">3 ou 4 dígitos.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:16px">
+      <button class="btn secundario" onclick="voltarPara('dados')">Voltar</button>
+      <button class="btn dourado" id="btn-confirmar" onclick="confirmarReserva()">Confirmar e pagar</button>
+    </div>
+  </div>
+
+  <!-- Passo 5: confirmação -->
+  <div class="card confirmacao" id="etapa-confirmacao" style="display:none">
+    <div class="icone">✅</div>
+    <h2>Reserva confirmada!</h2>
+    <p>Guarde o seu localizador:</p>
+    <div class="localizador" id="conf-localizador"></div>
+    <div id="conf-detalhes" style="max-width:420px;margin:0 auto;text-align:left"></div>
+    <p style="font-size:13.5px;color:var(--cinza);margin-top:14px">Você receberá a confirmação por e-mail e WhatsApp em instantes.</p>
+    <button class="btn" style="margin-top:16px" onclick="novaReserva()">Fazer outra reserva</button>
+  </div>
+</section>
+
+<!-- ============ ABA: ADMIN ============ -->
+<section id="painel-admin" class="painel">
+  <div class="card">
+    <h2>Mapa de disponibilidade</h2>
+    <p style="font-size:13.5px;color:var(--cinza);margin-bottom:12px">Unidades livres por noite. A disponibilidade nunca é um número guardado: é sempre calculada como total de unidades menos reservas ativas menos bloqueios. É isso que mantém o site e o painel sempre coerentes.</p>
+    <div class="cal-nav">
+      <button class="btn secundario" onclick="mudarMes(-1)">← Mês anterior</button>
+      <strong id="cal-titulo"></strong>
+      <button class="btn secundario" onclick="mudarMes(1)">Próximo mês →</button>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+    <p style="font-size:12.5px;color:var(--cinza);margin-top:8px">S = Quarto Standard, M = Suíte Master. Dias com moldura dourada = hoje. Valores em vermelho = esgotado.</p>
+  </div>
+
+  <div class="card">
+    <h2>Reservas</h2>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr><th>Localizador</th><th>Hóspede</th><th>Quarto</th><th>Canal</th><th>Check-in</th><th>Check-out</th><th>Total</th><th>Status</th><th>Ação</th></tr>
+        </thead>
+        <tbody id="tabela-reservas"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>Tarifas</h2>
+      <div class="campo">
+        <label for="adm-preco-std">Quarto Standard, diária base (R$)</label>
+        <input type="number" id="adm-preco-std" min="50" max="5000" step="10" />
+      </div>
+      <div class="campo">
+        <label for="adm-preco-mst">Suíte Master, diária base (R$)</label>
+        <input type="number" id="adm-preco-mst" min="50" max="9000" step="10" />
+      </div>
+      <div class="grid2">
+        <div class="campo">
+          <label for="adm-mult-fds">Multiplicador fim de semana</label>
+          <input type="number" id="adm-mult-fds" min="1" max="3" step="0.05" />
+        </div>
+        <div class="campo">
+          <label for="adm-mult-fer">Multiplicador feriado</label>
+          <input type="number" id="adm-mult-fer" min="1" max="4" step="0.05" />
+        </div>
+      </div>
+      <button class="btn" onclick="salvarTarifas()">Salvar tarifas</button>
+      <p style="font-size:12.5px;color:var(--cinza);margin-top:10px">Noites de sexta e sábado usam o multiplicador de fim de semana. Feriados nacionais usam o de feriado (vale o maior). Alterações valem na hora para novas cotações.</p>
+    </div>
+
+    <div class="card">
+      <h2>Bloquear datas (manutenção / uso interno)</h2>
+      <div class="campo">
+        <label for="blq-tipo">Tipo de quarto</label>
+        <select id="blq-tipo">
+          <option value="std">Quarto Standard</option>
+          <option value="mst">Suíte Master</option>
+        </select>
+      </div>
+      <div class="grid2">
+        <div class="campo" id="campo-blq-inicio">
+          <label for="blq-inicio">De</label>
+          <input type="date" id="blq-inicio" />
+          <div class="msg-erro">Data inválida.</div>
+        </div>
+        <div class="campo" id="campo-blq-fim">
+          <label for="blq-fim">Até (última noite)</label>
+          <input type="date" id="blq-fim" />
+          <div class="msg-erro">Precisa ser igual ou depois do início.</div>
+        </div>
+      </div>
+      <div class="campo">
+        <label for="blq-unidades">Unidades a bloquear</label>
+        <select id="blq-unidades">
+          <option value="1">1 unidade</option>
+          <option value="2">2 unidades</option>
+        </select>
+      </div>
+      <button class="btn" onclick="bloquearDatas()">Bloquear</button>
+      <div id="lista-bloqueios" style="margin-top:12px"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ABA: OVERBOOKING ============ -->
+<section id="painel-overbooking" class="painel">
+  <div class="card">
+    <h2>Como o sistema impede vender o mesmo quarto duas vezes</h2>
+    <p style="margin-bottom:10px">Overbooking acontece quando dois canais (ou duas pessoas) vendem a última unidade ao mesmo tempo. A proteção tem duas camadas:</p>
+    <p style="margin-bottom:8px"><strong>1. Disponibilidade calculada, nunca guardada.</strong> O sistema não mantém um contador de "quartos livres" que pode ficar defasado. A cada consulta, ele conta as reservas ativas de cada noite e subtrai do total de unidades.</p>
+    <p style="margin-bottom:8px"><strong>2. Reconferência atômica no momento de confirmar.</strong> Entre o hóspede ver o quarto e clicar em pagar, outra pessoa pode ter comprado. Por isso a confirmação reconfere todas as noites dentro de uma transação: ou grava a reserva inteira, ou recusa e devolve uma mensagem amigável. Nunca fica no meio do caminho.</p>
+    <p style="margin-bottom:14px">Clique abaixo para encenar a disputa: dois hóspedes, Ana e Bruno, tentando reservar a última Suíte Master na mesma fração de segundo.</p>
+    <button class="btn dourado" id="btn-simular" onclick="simularCorrida()">Simular disputa pela última suíte</button>
+    <button class="btn secundario" onclick="limparSimulacao()" style="margin-left:8px">Limpar simulação</button>
+    <div class="log-box" id="log-corrida" style="margin-top:16px">Aguardando simulação...</div>
+    <div class="aviso" style="margin-top:14px"><strong>Importante:</strong> essa proteção vale para as vendas do site. Se o hotel também vende em OTAs (Online Travel Agencies, como Booking e Decolar), os canais precisam de uma estratégia de convivência. Veja e simule as três opções na aba Canais e OTAs.</div>
+  </div>
+</section>
+
+<!-- ============ ABA: CANAIS E OTAs ============ -->
+<section id="painel-canais" class="painel">
+  <div class="card">
+    <h2>Distribuição de canais: site próprio + OTAs (Online Travel Agencies)</h2>
+    <p style="font-size:14px;margin-bottom:14px">Quando o hotel também vende em plataformas como Booking.com e Decolar, os canais precisam conviver sem vender o mesmo quarto duas vezes. Existem três estratégias. Escolha uma abaixo e simule reservas chegando pela OTA para ver como cada uma se comporta.</p>
+    <div class="grid3">
+      <div class="quarto-card modo-card" id="modo-cm" onclick="mudarModoCanal('cm')">
+        <span class="titulo-modo">1. Channel manager</span>
+        <p style="font-size:13px">Um sincronizador conecta todos os canais em tempo real. Reserva em qualquer lugar atualiza todos os outros em segundos.</p>
+        <span class="tag ok">Mais robusto</span>
+      </div>
+      <div class="quarto-card modo-card" id="modo-allot" onclick="mudarModoCanal('allot')">
+        <span class="titulo-modo">2. Inventário dividido</span>
+        <p style="font-size:13px">Cada canal recebe uma cota fixa de quartos e só vende a própria cota. Sem sincronização, sem risco entre canais.</p>
+        <span class="tag comum">Simples e seguro</span>
+      </div>
+      <div class="quarto-card modo-card" id="modo-ical" onclick="mudarModoCanal('ical')">
+        <span class="titulo-modo">3. Sincronização iCal</span>
+        <p style="font-size:13px">Os calendários se trocam de tempos em tempos. Barato, mas entre uma sincronização e outra existe janela de overbooking.</p>
+        <span class="tag feriado">Janela de risco</span>
+      </div>
+    </div>
+    <div id="config-allot" style="display:none;margin-top:16px">
+      <h3>Cotas por tipo de quarto</h3>
+      <div class="grid2">
+        <div>
+          <label>Quarto Standard (5 unidades no total)</label>
+          <div class="grid2">
+            <div class="campo"><label for="allot-std-site">Cota do site</label><input type="number" id="allot-std-site" min="0" max="5" /></div>
+            <div class="campo"><label for="allot-std-ota">Cota das OTAs</label><input type="number" id="allot-std-ota" min="0" max="5" /></div>
+          </div>
+        </div>
+        <div>
+          <label>Suíte Master (2 unidades no total)</label>
+          <div class="grid2">
+            <div class="campo"><label for="allot-mst-site">Cota do site</label><input type="number" id="allot-mst-site" min="0" max="2" /></div>
+            <div class="campo"><label for="allot-mst-ota">Cota das OTAs</label><input type="number" id="allot-mst-ota" min="0" max="2" /></div>
+          </div>
+        </div>
+      </div>
+      <button class="btn" onclick="salvarQuotas()">Salvar cotas</button>
+    </div>
+    <div class="aviso" id="explica-modo" style="margin-top:16px"></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>Booking.com (simulada)</h2>
+      <p style="font-size:13.5px;color:var(--cinza);margin-bottom:10px">Esta é a visão que a OTA tem do estoque do hotel, segundo a estratégia escolhida. Gere uma reserva e acompanhe o caminho dela no log ao lado.</p>
+      <h3>Disponibilidade vista pela OTA (próximas noites)</h3>
+      <div style="overflow-x:auto"><table id="ota-tabela"></table></div>
+      <div class="grid2" style="margin-top:12px">
+        <div class="campo">
+          <label for="ota-tipo">Tipo de quarto</label>
+          <select id="ota-tipo">
+            <option value="std">Quarto Standard</option>
+            <option value="mst">Suíte Master</option>
+          </select>
+        </div>
+        <div class="campo" id="campo-ota-data">
+          <label for="ota-data">Noite</label>
+          <input type="date" id="ota-data" />
+          <div class="msg-erro">Escolha uma data a partir de hoje.</div>
+        </div>
+      </div>
+      <button class="btn dourado" onclick="reservaOta()">Simular reserva chegando pela OTA</button>
+    </div>
+    <div class="card">
+      <h2>Log de sincronização</h2>
+      <div class="log-box" id="log-canais" style="min-height:200px;max-height:340px;overflow-y:auto">Nenhum evento ainda. Gere uma reserva pela OTA ao lado.</div>
+      <div id="bloco-sync" style="display:none">
+        <div class="sync-info" id="sync-info"></div>
+        <button class="btn" style="margin-top:8px" onclick="sincronizarIcal()">Sincronizar calendários agora</button>
+        <p style="font-size:12.5px;color:var(--cinza);margin-top:6px">No mundo real, o iCal sincroniza sozinho a cada poucas horas. Aqui você controla o momento para enxergar a janela de risco.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>Demonstração de Booking Engine (motor de reservas) desenvolvida por ClickWave · Hotel Horizonte é uma marca fictícia · © 2026</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ================== DADOS ================== */
+
+const FERIADOS = [
+  "2026-01-01", "2026-02-16", "2026-02-17", "2026-04-03", "2026-04-21",
+  "2026-05-01", "2026-06-04", "2026-09-07", "2026-10-12", "2026-11-02",
+  "2026-11-15", "2026-11-20", "2026-12-25",
+  "2027-01-01", "2027-02-08", "2027-02-09", "2027-03-26", "2027-04-21",
+  "2027-05-01", "2027-05-27", "2027-09-07", "2027-10-12", "2027-11-02",
+  "2027-11-15", "2027-11-20", "2027-12-25"
+];
+
+const estado = {
+  quartos: {
+    std: { nome: "Quarto Standard", total: 5, capacidade: 2, base: 280,
+           desc: "Cama queen ou duas de solteiro, ar condicionado, frigobar e café da manhã." },
+    mst: { nome: "Suíte Master", total: 2, capacidade: 3, base: 450,
+           desc: "Cama king, varanda com vista, banheira, ar condicionado e café da manhã." }
+  },
+  multFds: 1.3,
+  multFeriado: 1.5,
+  reservas: [],
+  bloqueios: [],
+  proximoId: 1,
+  canal: {
+    modo: "cm", // cm = channel manager | allot = inventário dividido | ical = sincronização iCal
+    allot: { std: { site: 3, ota: 2 }, mst: { site: 1, ota: 1 } },
+    pendentes: [],          // reservas de OTA ainda não sincronizadas (modo iCal)
+    ultimaSync: null,       // instante da última sincronização iCal
+    log: []
+  }
+};
+
+/* ================== UTILIDADES ================== */
+
+const fmtBRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+
+function hojeISO() {
+  const d = new Date();
+  return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, "0"), String(d.getDate()).padStart(2, "0")].join("-");
+}
+function isoParaData(iso) {
+  const [a, m, d] = iso.split("-").map(Number);
+  return new Date(a, m - 1, d);
+}
+function dataParaISO(d) {
+  return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, "0"), String(d.getDate()).padStart(2, "0")].join("-");
+}
+function somarDias(iso, n) {
+  const d = isoParaData(iso);
+  d.setDate(d.getDate() + n);
+  return dataParaISO(d);
+}
+function fmtData(iso) {
+  return isoParaData(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+}
+function noitesEntre(checkin, checkout) {
+  const noites = [];
+  let d = checkin;
+  while (d < checkout) { noites.push(d); d = somarDias(d, 1); }
+  return noites;
+}
+
+/* ================== MOTOR DE TARIFAS ================== */
+
+function classificarNoite(iso) {
+  if (FERIADOS.includes(iso)) return "feriado";
+  const dow = isoParaData(iso).getDay(); // 5 = sexta, 6 = sábado
+  if (dow === 5 || dow === 6) return "fds";
+  return "comum";
+}
+function precoNoite(tipo, iso) {
+  const base = estado.quartos[tipo].base;
+  const classe = classificarNoite(iso);
+  if (classe === "feriado") return Math.round(base * estado.multFeriado);
+  if (classe === "fds") return Math.round(base * estado.multFds);
+  return base;
+}
+function cotarEstadia(tipo, checkin, checkout) {
+  const noites = noitesEntre(checkin, checkout);
+  const itens = noites.map(n => ({ noite: n, classe: classificarNoite(n), valor: precoNoite(tipo, n) }));
+  return { itens, total: itens.reduce((s, i) => s + i.valor, 0) };
+}
+
+/* ================== DISPONIBILIDADE (sempre calculada) ================== */
+
+function contarReservas(tipo, noiteISO, canais, criadaAte) {
+  return estado.reservas.filter(r =>
+    r.status === "confirmada" && r.tipo === tipo &&
+    r.checkin <= noiteISO && noiteISO < r.checkout &&
+    (!canais || canais.includes(r.canal)) &&
+    (!criadaAte || r.criadaEm <= criadaAte)
+  ).length;
+}
+function unidadesBloqueadas(tipo, noiteISO) {
+  return estado.bloqueios
+    .filter(b => b.tipo === tipo && b.inicio <= noiteISO && noiteISO <= b.fim)
+    .reduce((s, b) => s + b.unidades, 0);
+}
+
+/* Visão do SITE (o motor de reservas). Depende da estratégia de canais. */
+function unidadesLivres(tipo, noiteISO) {
+  const blq = unidadesBloqueadas(tipo, noiteISO);
+  if (estado.canal.modo === "allot") {
+    // O site só vende a própria cota (reservas de balcão consomem a cota do site)
+    return Math.max(0, estado.canal.allot[tipo].site - contarReservas(tipo, noiteISO, ["site", "balcao"]) - blq);
+  }
+  // cm: pool compartilhado em tempo real. ical: idem, mas as reservas de OTA
+  // só entram aqui depois de sincronizadas (é a janela de risco).
+  return Math.max(0, estado.quartos[tipo].total - contarReservas(tipo, noiteISO) - blq);
+}
+
+/* Visão da OTA simulada. */
+function unidadesLivresOta(tipo, noiteISO) {
+  if (estado.canal.modo === "allot") {
+    return Math.max(0, estado.canal.allot[tipo].ota - contarReservas(tipo, noiteISO, ["ota"]));
+  }
+  if (estado.canal.modo === "ical") {
+    // A OTA enxerga o estoque como ele estava na última sincronização,
+    // mais as vendas dela mesma que ainda não sincronizaram.
+    const conhecidas = contarReservas(tipo, noiteISO, null, estado.canal.ultimaSync);
+    const pendentesAqui = estado.canal.pendentes
+      .filter(p => p.tipo === tipo && p.checkin <= noiteISO && noiteISO < p.checkout).length;
+    return Math.max(0, estado.quartos[tipo].total - conhecidas - pendentesAqui - unidadesBloqueadas(tipo, noiteISO));
+  }
+  return unidadesLivres(tipo, noiteISO); // cm: mesma visão, em tempo real
+}
+function disponibilidadeEstadia(tipo, checkin, checkout) {
+  return Math.min(...noitesEntre(checkin, checkout).map(n => unidadesLivres(tipo, n)));
+}
+
+/* ================== CONFIRMAÇÃO ATÔMICA ================== */
+/* Em produção isso é uma transação no banco de dados. Aqui, o JavaScript
+   de thread única faz o papel do lock: reconferir + gravar sem interrupção. */
+
+function tentarConfirmarReserva(dados) {
+  const livre = disponibilidadeEstadia(dados.tipo, dados.checkin, dados.checkout);
+  if (livre < 1) {
+    return { ok: false, motivo: "Enquanto você finalizava, a última unidade deste quarto foi reservada por outra pessoa. Nenhum valor foi cobrado." };
+  }
+  const reserva = {
+    id: estado.proximoId++,
+    loc: (dados.canal === "ota" ? "BK" : "HZ") + String(1000 + Math.floor(Math.random() * 9000)),
+    status: "confirmada",
+    criadaEm: new Date().toISOString(),
+    ...dados,
+    canal: dados.canal || "site"
+  };
+  estado.reservas.push(reserva);
+  return { ok: true, reserva };
+}
+
+/* ================== DADOS DE EXEMPLO ================== */
+
+function popularExemplo() {
+  const h = hojeISO();
+  const exemplos = [
+    { tipo: "std", di: 2, noites: 2, nome: "Carlos Andrade", tel: "(74) 99811-2233", email: "carlos@email.com", canal: "site" },
+    { tipo: "std", di: 3, noites: 3, nome: "Fernanda Lima", tel: "(71) 98877-1122", email: "fernanda@email.com", canal: "site" },
+    { tipo: "mst", di: 4, noites: 2, nome: "Juliana Castro", tel: "(11) 97654-8899", email: "juliana@email.com", canal: "site" },
+    { tipo: "std", di: 8, noites: 2, nome: "Roberto Nunes", tel: "(74) 98123-4567", email: "roberto@email.com", canal: "balcao" }
+  ];
+  exemplos.forEach(e => {
+    const checkin = somarDias(h, e.di);
+    const checkout = somarDias(checkin, e.noites);
+    const { total } = cotarEstadia(e.tipo, checkin, checkout);
+    estado.reservas.push({
+      id: estado.proximoId++, loc: "HZ" + String(1000 + Math.floor(Math.random() * 9000)),
+      status: "confirmada", tipo: e.tipo, checkin, checkout, hospedes: 2,
+      nome: e.nome, telefone: e.tel, email: e.email, obs: "", total, pagamento: "pix",
+      canal: e.canal, criadaEm: new Date().toISOString()
+    });
+  });
+}
+
+/* ================== NAVEGAÇÃO ================== */
+
+function trocarAba(aba) {
+  document.querySelectorAll(".painel").forEach(p => p.classList.remove("ativo"));
+  document.querySelectorAll("nav button").forEach(b => b.classList.remove("ativo"));
+  document.getElementById("painel-" + aba).classList.add("ativo");
+  document.getElementById("tab-btn-" + aba).classList.add("ativo");
+  if (aba === "admin") renderizarAdmin();
+  if (aba === "canais") renderizarCanais();
+}
+
+const ETAPAS = ["datas", "quartos", "dados", "pagamento", "confirmacao"];
+const ROTULOS = ["1. Datas", "2. Quarto", "3. Dados", "4. Pagamento", "5. Confirmação"];
+let etapaAtual = "datas";
+
+function mostrarEtapa(etapa) {
+  etapaAtual = etapa;
+  ETAPAS.forEach(e => {
+    document.getElementById("etapa-" + e).style.display = (e === etapa) ? "" : "none";
+  });
+  const idx = ETAPAS.indexOf(etapa);
+  document.getElementById("passos").innerHTML = ROTULOS.map((r, i) => {
+    const cls = i === idx ? "atual" : (i < idx ? "feito" : "");
+    return '<span class="passo-chip ' + cls + '">' + r + "</span>";
+  }).join("");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+function voltarPara(etapa) { mostrarEtapa(etapa); }
+
+/* ================== FLUXO DO HÓSPEDE ================== */
+
+let selecao = null;
+
+function validarCampo(idCampo, condicao) {
+  const campo = document.getElementById(idCampo);
+  campo.classList.toggle("invalido", !condicao);
+  return condicao;
+}
+
+function buscarQuartos() {
+  const checkin = document.getElementById("inp-checkin").value;
+  const checkout = document.getElementById("inp-checkout").value;
+  const hospedes = Number(document.getElementById("inp-hospedes").value);
+  const h = hojeISO();
+
+  const vIn = !!checkin && checkin >= h;
+  const vOut = !!checkout && checkout > checkin;
+  document.querySelectorAll("#etapa-datas .campo")[0].classList.toggle("invalido", !vIn);
+  document.querySelectorAll("#etapa-datas .campo")[1].classList.toggle("invalido", !vOut);
+  if (!vIn || !vOut) return;
+
+  const noites = noitesEntre(checkin, checkout);
+  selecao = { checkin, checkout, hospedes, noites: noites.length };
+
+  document.getElementById("resumo-busca").textContent =
+    fmtData(checkin) + " até " + fmtData(checkout) + " · " + noites.length +
+    (noites.length === 1 ? " noite · " : " noites · ") + hospedes + (hospedes === 1 ? " hóspede" : " hóspedes");
+
+  const lista = document.getElementById("lista-quartos");
+  lista.innerHTML = "";
+  Object.entries(estado.quartos).forEach(([tipo, q]) => {
+    const livre = disponibilidadeEstadia(tipo, checkin, checkout);
+    const cabe = hospedes <= q.capacidade;
+    const cot = cotarEstadia(tipo, checkin, checkout);
+    const esgotado = livre < 1 || !cabe;
+
+    const tagsNoites = cot.itens.map(i => {
+      const rot = i.classe === "feriado" ? "feriado" : (i.classe === "fds" ? "fim de semana" : "dia comum");
+      return '<span class="total-linha"><span>' + fmtData(i.noite) + ' <span class="tag ' + i.classe + '">' + rot + "</span></span><span>" + fmtBRL.format(i.valor) + "</span></span>";
+    }).join("");
+
+    const motivo = !cabe
+      ? "Capacidade máxima de " + q.capacidade + " hóspedes"
+      : (livre < 1 ? "Esgotado nessas datas" : livre + (livre === 1 ? " unidade livre" : " unidades livres"));
+
+    const div = document.createElement("div");
+    div.className = "quarto-card" + (esgotado ? " esgotado" : "");
+    div.innerHTML =
+      "<h3>" + q.nome + "</h3>" +
+      '<p class="preco-noite">' + q.desc + "</p>" +
+      '<span class="tag ' + (esgotado ? "cheio" : "ok") + '">' + motivo + "</span>" +
+      "<div>" + tagsNoites + '<span class="total-linha destaque"><span>Total</span><span>' + fmtBRL.format(cot.total) + "</span></span></div>";
+
+    const btn = document.createElement("button");
+    btn.className = "btn";
+    btn.textContent = esgotado ? "Indisponível" : "Selecionar";
+    btn.disabled = esgotado;
+    if (!esgotado) btn.onclick = () => selecionarQuarto(tipo);
+    div.appendChild(btn);
+    lista.appendChild(div);
+  });
+
+  mostrarEtapa("quartos");
+}
+
+function selecionarQuarto(tipo) {
+  const cot = cotarEstadia(tipo, selecao.checkin, selecao.checkout);
+  selecao.tipo = tipo;
+  selecao.total = cot.total;
+  document.getElementById("resumo-pre-pagamento").innerHTML =
+    "<strong>" + estado.quartos[tipo].nome + "</strong> · " + fmtData(selecao.checkin) + " até " +
+    fmtData(selecao.checkout) + " · " + selecao.noites + (selecao.noites === 1 ? " noite" : " noites") +
+    " · Total: <strong>" + fmtBRL.format(cot.total) + "</strong>";
+  mostrarEtapa("dados");
+}
+
+function irParaPagamento() {
+  const nome = document.getElementById("inp-nome").value.trim();
+  const tel = document.getElementById("inp-telefone").value.replace(/\D/g, "");
+  const email = document.getElementById("inp-email").value.trim();
+
+  const vNome = validarCampo("campo-nome", /^[A-Za-zÀ-ÖØ-öø-ÿ]{2,}(\s+[A-Za-zÀ-ÖØ-öø-ÿ'.]+)+$/.test(nome));
+  const vTel = validarCampo("campo-telefone", tel.length === 10 || tel.length === 11);
+  const vEmail = validarCampo("campo-email", /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email));
+  if (!vNome || !vTel || !vEmail) return;
+
+  selecao.nome = nome;
+  selecao.telefone = document.getElementById("inp-telefone").value;
+  selecao.email = email;
+  selecao.obs = document.getElementById("inp-obs").value.trim();
+
+  const q = estado.quartos[selecao.tipo];
+  document.getElementById("resumo-pagamento").innerHTML =
+    '<div class="total-linha"><span>Quarto</span><span>' + q.nome + "</span></div>" +
+    '<div class="total-linha"><span>Período</span><span>' + fmtData(selecao.checkin) + " a " + fmtData(selecao.checkout) + "</span></div>" +
+    '<div class="total-linha"><span>Noites</span><span>' + selecao.noites + "</span></div>" +
+    '<div class="total-linha"><span>Hóspedes</span><span>' + selecao.hospedes + "</span></div>" +
+    '<div class="total-linha"><span>Titular</span><span>' + selecao.nome + "</span></div>" +
+    '<div class="total-linha destaque"><span>Total a pagar</span><span>' + fmtBRL.format(selecao.total) + "</span></div>" +
+    '<p style="font-size:12.5px;color:var(--cinza);margin-top:8px">Cancelamento gratuito até 7 dias antes do check-in. Depois disso, é retida a primeira diária (política configurável pelo hotel).</p>';
+  mostrarEtapa("pagamento");
+}
+
+function alternarPagamento() {
+  const metodo = document.getElementById("inp-pagamento").value;
+  document.getElementById("bloco-pix").style.display = metodo === "pix" ? "" : "none";
+  document.getElementById("bloco-cartao").style.display = metodo === "cartao" ? "" : "none";
+}
+
+function confirmarReserva() {
+  const metodo = document.getElementById("inp-pagamento").value;
+  if (metodo === "cartao") {
+    const num = document.getElementById("inp-cartao").value.replace(/\D/g, "");
+    const val = document.getElementById("inp-validade").value;
+    const cvv = document.getElementById("inp-cvv").value;
+    const vNum = validarCampo("campo-cartao", num.length === 16);
+    const vVal = validarCampo("campo-validade", validarValidade(val));
+    const vCvv = validarCampo("campo-cvv", /^\d{3,4}$/.test(cvv));
+    if (!vNum || !vVal || !vCvv) return;
+  }
+
+  const btn = document.getElementById("btn-confirmar");
+  btn.disabled = true;
+  btn.textContent = "Processando pagamento...";
+
+  // Simula a latência do gateway e então executa a confirmação atômica
+  setTimeout(() => {
+    const resultado = tentarConfirmarReserva({
+      tipo: selecao.tipo, checkin: selecao.checkin, checkout: selecao.checkout,
+      hospedes: selecao.hospedes, nome: selecao.nome, telefone: selecao.telefone,
+      email: selecao.email, obs: selecao.obs, total: selecao.total, pagamento: metodo
+    });
+    btn.disabled = false;
+    btn.textContent = "Confirmar e pagar";
+
+    if (!resultado.ok) {
+      mostrarToast(resultado.motivo, true);
+      mostrarEtapa("datas");
+      return;
+    }
+    const r = resultado.reserva;
+    document.getElementById("conf-localizador").textContent = r.loc;
+    document.getElementById("conf-detalhes").innerHTML =
+      '<div class="total-linha"><span>Quarto</span><span>' + estado.quartos[r.tipo].nome + "</span></div>" +
+      '<div class="total-linha"><span>Check-in</span><span>' + fmtData(r.checkin) + ", a partir das 14h</span></div>" +
+      '<div class="total-linha"><span>Check-out</span><span>' + fmtData(r.checkout) + ", até as 12h</span></div>" +
+      '<div class="total-linha"><span>Pagamento</span><span>' + (r.pagamento === "pix" ? "Pix" : "Cartão de crédito") + "</span></div>" +
+      '<div class="total-linha destaque"><span>Valor pago</span><span>' + fmtBRL.format(r.total) + "</span></div>";
+    mostrarEtapa("confirmacao");
+  }, 900);
+}
+
+function validarValidade(v) {
+  const m = v.match(/^(\d{2})\/(\d{2})$/);
+  if (!m) return false;
+  const mes = Number(m[1]), ano = 2000 + Number(m[2]);
+  if (mes < 1 || mes > 12) return false;
+  const agora = new Date();
+  return ano > agora.getFullYear() || (ano === agora.getFullYear() && mes >= agora.getMonth() + 1);
+}
+
+function novaReserva() {
+  ["inp-nome", "inp-telefone", "inp-email", "inp-obs", "inp-cartao", "inp-validade", "inp-cvv"].forEach(id => {
+    document.getElementById(id).value = "";
+  });
+  document.getElementById("obs-contador").textContent = "0/140";
+  mostrarEtapa("datas");
+}
+
+/* ================== ADMIN ================== */
+
+let mesVisivel = null;
+
+function renderizarAdmin() {
+  if (!mesVisivel) {
+    const d = new Date();
+    mesVisivel = { ano: d.getFullYear(), mes: d.getMonth() };
+  }
+  renderizarCalendario();
+  renderizarTabelaReservas();
+  renderizarBloqueios();
+  document.getElementById("adm-preco-std").value = estado.quartos.std.base;
+  document.getElementById("adm-preco-mst").value = estado.quartos.mst.base;
+  document.getElementById("adm-mult-fds").value = estado.multFds;
+  document.getElementById("adm-mult-fer").value = estado.multFeriado;
+}
+
+function mudarMes(delta) {
+  mesVisivel.mes += delta;
+  if (mesVisivel.mes < 0) { mesVisivel.mes = 11; mesVisivel.ano--; }
+  if (mesVisivel.mes > 11) { mesVisivel.mes = 0; mesVisivel.ano++; }
+  renderizarCalendario();
+}
+
+function renderizarCalendario() {
+  const { ano, mes } = mesVisivel;
+  const primeiro = new Date(ano, mes, 1);
+  const dias = new Date(ano, mes + 1, 0).getDate();
+  const h = hojeISO();
+
+  document.getElementById("cal-titulo").textContent =
+    primeiro.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }).replace(/^./, c => c.toUpperCase());
+
+  const grid = document.getElementById("cal-grid");
+  grid.innerHTML = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]
+    .map(d => '<div class="cal-dow">' + d + "</div>").join("");
+
+  for (let i = 0; i < primeiro.getDay(); i++) grid.innerHTML += '<div class="cal-dia fora"></div>';
+
+  for (let dia = 1; dia <= dias; dia++) {
+    const iso = dataParaISO(new Date(ano, mes, dia));
+    const s = unidadesLivres("std", iso);
+    const m = unidadesLivres("mst", iso);
+    const classe = classificarNoite(iso);
+    const tag = classe === "feriado" ? ' <span class="tag feriado">F</span>' : (classe === "fds" ? ' <span class="tag fds">fds</span>' : "");
+    grid.innerHTML +=
+      '<div class="cal-dia' + (iso === h ? " hoje" : "") + '">' +
+      '<span class="num">' + dia + "</span>" + tag +
+      '<span class="disp">' +
+      '<span class="disp-item' + (s === 0 ? " zero" : "") + '">S: ' + s + "</span>" +
+      '<span class="disp-item' + (m === 0 ? " zero" : "") + '">M: ' + m + "</span>" +
+      "</span></div>";
+  }
+}
+
+function renderizarTabelaReservas() {
+  const corpo = document.getElementById("tabela-reservas");
+  const ativas = [...estado.reservas].sort((a, b) => a.checkin.localeCompare(b.checkin));
+  if (ativas.length === 0) {
+    corpo.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--cinza)">Nenhuma reserva ainda.</td></tr>';
+    return;
+  }
+  const rotuloCanal = { site: "Site", ota: "OTA", balcao: "Balcão" };
+  corpo.innerHTML = "";
+  ativas.forEach(r => {
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      "<td><strong>" + r.loc + "</strong></td><td>" + r.nome + "</td><td>" + estado.quartos[r.tipo].nome +
+      "</td><td>" + (rotuloCanal[r.canal] || "Site") +
+      "</td><td>" + fmtData(r.checkin) + "</td><td>" + fmtData(r.checkout) + "</td><td>" + fmtBRL.format(r.total) +
+      '</td><td><span class="tag ' + (r.status === "confirmada" ? "ok" : "cheio") + '">' + r.status + "</span></td>";
+    const td = document.createElement("td");
+    if (r.status === "confirmada") {
+      const btn = document.createElement("button");
+      btn.className = "btn secundario";
+      btn.style.padding = "6px 12px";
+      btn.style.fontSize = "13px";
+      btn.textContent = "Cancelar";
+      btn.onclick = () => cancelarReserva(r.id);
+      td.appendChild(btn);
+    } else {
+      td.textContent = "-";
+    }
+    tr.appendChild(td);
+    corpo.appendChild(tr);
+  });
+}
+
+function cancelarReserva(id) {
+  const r = estado.reservas.find(x => x.id === id);
+  if (!r) return;
+  if (!confirm("Cancelar a reserva " + r.loc + " de " + r.nome + "? A unidade volta a ficar disponível.")) return;
+  r.status = "cancelada";
+  renderizarAdmin();
+  mostrarToast("Reserva " + r.loc + " cancelada. Disponibilidade atualizada em todos os calendários.");
+}
+
+function salvarTarifas() {
+  const pStd = Number(document.getElementById("adm-preco-std").value);
+  const pMst = Number(document.getElementById("adm-preco-mst").value);
+  const mFds = Number(document.getElementById("adm-mult-fds").value);
+  const mFer = Number(document.getElementById("adm-mult-fer").value);
+  if (!(pStd >= 50 && pStd <= 5000) || !(pMst >= 50 && pMst <= 9000)) {
+    mostrarToast("Diárias devem estar entre R$ 50 e R$ 9.000.", true); return;
+  }
+  if (!(mFds >= 1 && mFds <= 3) || !(mFer >= 1 && mFer <= 4)) {
+    mostrarToast("Multiplicadores fora do intervalo permitido.", true); return;
+  }
+  estado.quartos.std.base = pStd;
+  estado.quartos.mst.base = pMst;
+  estado.multFds = mFds;
+  estado.multFeriado = mFer;
+  mostrarToast("Tarifas atualizadas. Novas cotações já usam os valores novos.");
+}
+
+function bloquearDatas() {
+  const tipo = document.getElementById("blq-tipo").value;
+  const inicio = document.getElementById("blq-inicio").value;
+  const fim = document.getElementById("blq-fim").value;
+  const unidades = Number(document.getElementById("blq-unidades").value);
+  const vIni = validarCampo("campo-blq-inicio", !!inicio);
+  const vFim = validarCampo("campo-blq-fim", !!fim && fim >= inicio);
+  if (!vIni || !vFim) return;
+  estado.bloqueios.push({ id: Date.now(), tipo, inicio, fim, unidades });
+  renderizarAdmin();
+  mostrarToast("Bloqueio criado. As unidades saíram de venda no período.");
+}
+
+function removerBloqueio(id) {
+  estado.bloqueios = estado.bloqueios.filter(b => b.id !== id);
+  renderizarAdmin();
+  mostrarToast("Bloqueio removido. Unidades de volta à venda.");
+}
+
+function renderizarBloqueios() {
+  const div = document.getElementById("lista-bloqueios");
+  if (estado.bloqueios.length === 0) { div.innerHTML = ""; return; }
+  div.innerHTML = "<strong style='font-size:13.5px'>Bloqueios ativos:</strong>";
+  estado.bloqueios.forEach(b => {
+    const linha = document.createElement("div");
+    linha.className = "total-linha";
+    linha.innerHTML = "<span>" + estado.quartos[b.tipo].nome + " · " + fmtData(b.inicio) + " a " + fmtData(b.fim) + " · " + b.unidades + " un.</span>";
+    const btn = document.createElement("button");
+    btn.className = "btn secundario";
+    btn.style.padding = "3px 10px";
+    btn.style.fontSize = "12px";
+    btn.textContent = "Remover";
+    btn.onclick = () => removerBloqueio(b.id);
+    linha.appendChild(btn);
+    div.appendChild(linha);
+  });
+}
+
+/* ================== SIMULAÇÃO DE OVERBOOKING ================== */
+
+let simulacaoRodando = false;
+const reservasDaSimulacao = [];
+
+function acharNoiteComUmaSuite() {
+  let d = somarDias(hojeISO(), 1);
+  for (let i = 0; i < 120; i++) {
+    if (unidadesLivres("mst", d) >= 1) return d;
+    d = somarDias(d, 1);
+  }
+  return null;
+}
+
+function simularCorrida() {
+  if (simulacaoRodando) return;
+  const noite = acharNoiteComUmaSuite();
+  if (!noite) { mostrarToast("Sem noites com Suíte Master disponível nos próximos meses. Cancele alguma reserva no painel.", true); return; }
+
+  // Deixa exatamente 1 unidade livre nessa noite, bloqueando as demais
+  const livresAgora = unidadesLivres("mst", noite);
+  let bloqueioTemp = null;
+  if (livresAgora > 1) {
+    bloqueioTemp = { id: Date.now(), tipo: "mst", inicio: noite, fim: noite, unidades: livresAgora - 1 };
+    estado.bloqueios.push(bloqueioTemp);
+  }
+
+  simulacaoRodando = true;
+  document.getElementById("btn-simular").disabled = true;
+  const log = document.getElementById("log-corrida");
+  log.innerHTML = "";
+  const saida = somarDias(noite, 1);
+  const preco = precoNoite("mst", noite);
+
+  const passos = [
+    { t: 300,  html: "Cenário: resta <b>1 Suíte Master</b> para a noite de " + fmtData(noite) + " (diária " + fmtBRL.format(preco) + ")." },
+    { t: 900,  html: '<span class="la">[Ana]</span>   14:02:11.104  consulta disponibilidade... resposta: 1 unidade livre' },
+    { t: 1400, html: '<span class="lb">[Bruno]</span> 14:02:11.532  consulta disponibilidade... resposta: 1 unidade livre' },
+    { t: 2100, html: '<span class="la">[Ana]</span>   14:02:38.771  preenche dados e paga via Pix' },
+    { t: 2600, html: '<span class="lb">[Bruno]</span> 14:02:39.019  preenche dados e paga via cartão' },
+    { t: 3300, html: '<span class="la">[Ana]</span>   14:02:39.204  COMMIT: transação reconfere a noite... <span class="lok">1 livre, reserva gravada ✔</span>', acao: () => {
+      const r = tentarConfirmarReserva({ tipo: "mst", checkin: noite, checkout: saida, hospedes: 2, nome: "Ana Ribeiro", telefone: "(74) 99911-0001", email: "ana@email.com", obs: "", total: preco, pagamento: "pix" });
+      if (r.ok) reservasDaSimulacao.push(r.reserva.id);
+    }},
+    { t: 4100, html: '<span class="lb">[Bruno]</span> 14:02:39.377  COMMIT: transação reconfere a noite... <span class="lerr">0 livres, gravação recusada ✘</span>', acao: () => {
+      tentarConfirmarReserva({ tipo: "mst", checkin: noite, checkout: saida, hospedes: 2, nome: "Bruno Costa", telefone: "(74) 99911-0002", email: "bruno@email.com", obs: "", total: preco, pagamento: "cartao" });
+    }},
+    { t: 4900, html: '<span class="lb">[Bruno]</span> recebe na tela: "Essa suíte acabou de ser reservada por outra pessoa. Nenhum valor foi cobrado." O pagamento é estornado automaticamente pelo gateway.' },
+    { t: 5700, html: '<span class="lok">Resultado: 1 quarto, 1 reserva. Zero overbooking.</span> Sem a reconferência atômica, os dois teriam pago e um deles chegaria ao hotel sem quarto.' }
+  ];
+
+  passos.forEach(p => {
+    setTimeout(() => {
+      if (p.acao) p.acao();
+      log.innerHTML += p.html + "\n";
+      log.scrollTop = log.scrollHeight;
+      if (p === passos[passos.length - 1]) {
+        simulacaoRodando = false;
+        document.getElementById("btn-simular").disabled = false;
+        if (bloqueioTemp) estado.bloqueios = estado.bloqueios.filter(b => b.id !== bloqueioTemp.id);
+      }
+    }, p.t);
+  });
+}
+
+function limparSimulacao() {
+  if (simulacaoRodando) return;
+  reservasDaSimulacao.forEach(id => {
+    const r = estado.reservas.find(x => x.id === id);
+    if (r) r.status = "cancelada";
+  });
+  reservasDaSimulacao.length = 0;
+  document.getElementById("log-corrida").textContent = "Aguardando simulação...";
+  mostrarToast("Simulação limpa. Reservas de teste canceladas.");
+}
+
+/* ================== CANAIS E OTAs ================== */
+
+const EXPLICA_MODO = {
+  cm: "<strong>Channel manager ativo.</strong> Site e OTA compartilham o mesmo estoque em tempo real. Uma reserva em qualquer canal atualiza todos os outros em segundos: repare que a disponibilidade da OTA e a do site andam sempre juntas.",
+  allot: "<strong>Inventário dividido.</strong> O site vende só a cota dele e a OTA só a dela. Não existe sincronização porque não existe estoque compartilhado: overbooking entre canais é impossível, ao custo de um canal poder esgotar enquanto sobra quarto no outro.",
+  ical: "<strong>Sincronização iCal.</strong> A OTA enxerga o estoque como ele estava na última troca de calendários. Venda no site e repare que a OTA continua mostrando o quarto por algum tempo: essa é a janela de overbooking. Sincronize e veja o conflito ser detectado."
+};
+
+function logCanal(msg, classe) {
+  const hora = new Date().toLocaleTimeString("pt-BR");
+  estado.canal.log.unshift('<span class="' + (classe || "la") + '">[' + hora + "]</span> " + msg);
+  if (estado.canal.log.length > 40) estado.canal.log.pop();
+  const box = document.getElementById("log-canais");
+  box.innerHTML = estado.canal.log.join("\n");
+}
+
+function mudarModoCanal(novo) {
+  if (estado.canal.modo === novo) return;
+  if (estado.canal.modo === "ical" && estado.canal.pendentes.length > 0) {
+    sincronizarIcal(); // não deixa reserva pendente órfã ao trocar de estratégia
+  }
+  estado.canal.modo = novo;
+  if (novo === "ical" && !estado.canal.ultimaSync) estado.canal.ultimaSync = new Date().toISOString();
+  const nomes = { cm: "Channel manager", allot: "Inventário dividido", ical: "Sincronização iCal" };
+  logCanal("Estratégia alterada para: " + nomes[novo], "lb");
+  renderizarCanais();
+}
+
+function salvarQuotas() {
+  const lerCota = id => Number(document.getElementById(id).value);
+  const novo = {
+    std: { site: lerCota("allot-std-site"), ota: lerCota("allot-std-ota") },
+    mst: { site: lerCota("allot-mst-site"), ota: lerCota("allot-mst-ota") }
+  };
+  for (const tipo of ["std", "mst"]) {
+    const c = novo[tipo];
+    if (!Number.isInteger(c.site) || !Number.isInteger(c.ota) || c.site < 0 || c.ota < 0) {
+      mostrarToast("Cotas devem ser números inteiros a partir de zero.", true); return;
+    }
+    if (c.site + c.ota > estado.quartos[tipo].total) {
+      mostrarToast("A soma das cotas de " + estado.quartos[tipo].nome + " passa do total de " + estado.quartos[tipo].total + " unidades.", true); return;
+    }
+  }
+  estado.canal.allot = novo;
+  logCanal("Cotas atualizadas. Standard: site " + novo.std.site + " / OTA " + novo.std.ota + ". Master: site " + novo.mst.site + " / OTA " + novo.mst.ota + ".", "lb");
+  renderizarCanais();
+  mostrarToast("Cotas salvas.");
+}
+
+const NOMES_OTA = ["Paulo Mendes", "Larissa Rocha", "Diego Farias", "Camila Torres", "Rafael Pinto", "Beatriz Melo"];
+
+function reservaOta() {
+  const tipo = document.getElementById("ota-tipo").value;
+  const data = document.getElementById("ota-data").value;
+  const vData = validarCampo("campo-ota-data", !!data && data >= hojeISO());
+  if (!vData) return;
+
+  const saida = somarDias(data, 1);
+  const nomeQ = estado.quartos[tipo].nome;
+  const visaoOta = unidadesLivresOta(tipo, data);
+  if (visaoOta < 1) {
+    logCanal("Booking.com tenta vender " + nomeQ + " em " + fmtData(data) + ": <span class='lerr'>sem disponibilidade na visão da OTA, venda recusada pela própria plataforma.</span>", "lb");
+    return;
+  }
+
+  const hospede = NOMES_OTA[Math.floor(Math.random() * NOMES_OTA.length)];
+  const valor = precoNoite(tipo, data);
+  const modo = estado.canal.modo;
+
+  if (modo === "cm") {
+    const r = tentarConfirmarReserva({ tipo, checkin: data, checkout: saida, hospedes: 2, nome: hospede, telefone: "via OTA", email: "mascarado pela OTA", obs: "", total: valor, pagamento: "ota", canal: "ota" });
+    if (r.ok) {
+      logCanal("Reserva de " + hospede + " na Booking (" + nomeQ + ", " + fmtData(data) + ")", "lb");
+      logCanal("→ webhook da OTA → channel manager → gravada no sistema → <span class='lok'>disponibilidade atualizada em todos os canais em segundos ✔</span>");
+    } else {
+      logCanal("<span class='lerr'>Channel manager recusou: estoque acabou entre a busca e a confirmação.</span>", "lb");
+    }
+  } else if (modo === "allot") {
+    estado.reservas.push({
+      id: estado.proximoId++, loc: "BK" + String(1000 + Math.floor(Math.random() * 9000)),
+      status: "confirmada", tipo, checkin: data, checkout: saida, hospedes: 2,
+      nome: hospede, telefone: "via OTA", email: "mascarado pela OTA", obs: "",
+      total: valor, pagamento: "ota", canal: "ota", criadaEm: new Date().toISOString()
+    });
+    logCanal("Reserva de " + hospede + " na Booking (" + nomeQ + ", " + fmtData(data) + ") consumiu 1 unidade <span class='lok'>da cota da OTA ✔</span>. A cota do site não foi tocada: nenhuma sincronização é necessária.", "lb");
+  } else { // ical
+    estado.canal.pendentes.push({ tipo, checkin: data, checkout: saida, nome: hospede, total: valor });
+    logCanal("Reserva de " + hospede + " na Booking (" + nomeQ + ", " + fmtData(data) + "). <span class='lerr'>O site ainda não sabe dela:</span> ficará invisível até a próxima sincronização de calendários.", "lb");
+  }
+  renderizarCanais();
+}
+
+function sincronizarIcal() {
+  const pendentes = [...estado.canal.pendentes];
+  estado.canal.pendentes = [];
+  logCanal("Sincronização iCal iniciada: trocando calendários com as OTAs...", "lb");
+  if (pendentes.length === 0) logCanal("Nenhuma reserva nova do lado da OTA.");
+  pendentes.forEach(p => {
+    const livre = disponibilidadeEstadia(p.tipo, p.checkin, p.checkout);
+    const base = {
+      id: estado.proximoId++, loc: "BK" + String(1000 + Math.floor(Math.random() * 9000)),
+      tipo: p.tipo, checkin: p.checkin, checkout: p.checkout, hospedes: 2,
+      nome: p.nome, telefone: "via OTA", email: "mascarado pela OTA", obs: "",
+      total: p.total, pagamento: "ota", canal: "ota", criadaEm: new Date().toISOString()
+    };
+    if (livre >= 1) {
+      estado.reservas.push({ ...base, status: "confirmada" });
+      logCanal("Reserva de " + p.nome + " (" + fmtData(p.checkin) + ") importada da OTA: <span class='lok'>havia unidade livre, confirmada ✔</span>");
+    } else {
+      estado.reservas.push({ ...base, status: "conflito" });
+      logCanal("<span class='lerr'>OVERBOOKING DETECTADO ✘</span> " + p.nome + " comprou na OTA a mesma noite (" + fmtData(p.checkin) + ") que o site vendeu durante a janela. Alguém vai ter que ligar para o hóspede.", "lb");
+    }
+  });
+  estado.canal.ultimaSync = new Date().toISOString();
+  renderizarCanais();
+}
+
+function renderizarCanais() {
+  ["cm", "allot", "ical"].forEach(m => {
+    document.getElementById("modo-" + m).classList.toggle("sel", estado.canal.modo === m);
+  });
+  document.getElementById("config-allot").style.display = estado.canal.modo === "allot" ? "" : "none";
+  document.getElementById("bloco-sync").style.display = estado.canal.modo === "ical" ? "" : "none";
+  document.getElementById("explica-modo").innerHTML = EXPLICA_MODO[estado.canal.modo];
+
+  if (estado.canal.modo === "allot") {
+    document.getElementById("allot-std-site").value = estado.canal.allot.std.site;
+    document.getElementById("allot-std-ota").value = estado.canal.allot.std.ota;
+    document.getElementById("allot-mst-site").value = estado.canal.allot.mst.site;
+    document.getElementById("allot-mst-ota").value = estado.canal.allot.mst.ota;
+  }
+  if (estado.canal.modo === "ical") {
+    const s = estado.canal.ultimaSync ? new Date(estado.canal.ultimaSync).toLocaleTimeString("pt-BR") : "nunca";
+    document.getElementById("sync-info").innerHTML =
+      "Última sincronização: <strong>" + s + "</strong>" +
+      (estado.canal.pendentes.length > 0
+        ? ' · <span style="color:var(--erro);font-weight:700">' + estado.canal.pendentes.length + " reserva(s) da OTA invisíveis para o site</span>"
+        : " · calendários em dia");
+  }
+
+  const inpData = document.getElementById("ota-data");
+  if (!inpData.value) inpData.value = somarDias(hojeISO(), 1);
+  inpData.min = hojeISO();
+
+  const amanha = somarDias(hojeISO(), 1);
+  let linhas = "<tr><th>Noite</th><th>Standard (OTA vê)</th><th>Master (OTA vê)</th><th>Standard (site vê)</th><th>Master (site vê)</th></tr>";
+  for (let i = 0; i < 5; i++) {
+    const n = somarDias(amanha, i);
+    const oS = unidadesLivresOta("std", n), oM = unidadesLivresOta("mst", n);
+    const sS = unidadesLivres("std", n), sM = unidadesLivres("mst", n);
+    const alerta = (oS > 0 && sS === 0) || (oM > 0 && sM === 0);
+    linhas += "<tr" + (alerta ? ' style="outline:2px solid var(--erro)"' : "") + "><td>" + fmtData(n) + "</td><td>" + oS + "</td><td>" + oM + "</td><td>" + sS + "</td><td>" + sM + "</td></tr>";
+  }
+  document.getElementById("ota-tabela").innerHTML = linhas;
+}
+
+/* ================== EXTRAS DE UI ================== */
+
+let toastTimer = null;
+function mostrarToast(msg, erro) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast visivel" + (erro ? " erro" : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = "toast"; }, 4200);
+}
+
+function desenharQR() {
+  const qr = document.getElementById("pix-qr");
+  let html = "";
+  let seed = 42;
+  for (let i = 0; i < 144; i++) {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    const borda = i < 12 || i >= 132 || i % 12 === 0 || i % 12 === 11;
+    html += "<i class='" + ((seed & 4) || borda ? "p" : "") + "'></i>";
+  }
+  qr.innerHTML = html;
+}
+
+/* máscara de telefone */
+document.getElementById("inp-telefone").addEventListener("input", e => {
+  let v = e.target.value.replace(/\D/g, "").slice(0, 11);
+  if (v.length > 10) v = v.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, "($1) $2-$3");
+  else if (v.length > 6) v = v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, "($1) $2-$3");
+  else if (v.length > 2) v = v.replace(/^(\d{2})(\d{0,5}).*/, "($1) $2");
+  else if (v.length > 0) v = v.replace(/^(\d{0,2}).*/, "($1");
+  e.target.value = v;
+});
+/* máscara de cartão */
+document.getElementById("inp-cartao").addEventListener("input", e => {
+  e.target.value = e.target.value.replace(/\D/g, "").slice(0, 16).replace(/(\d{4})(?=\d)/g, "$1 ");
+});
+/* máscara de validade */
+document.getElementById("inp-validade").addEventListener("input", e => {
+  let v = e.target.value.replace(/\D/g, "").slice(0, 4);
+  if (v.length > 2) v = v.slice(0, 2) + "/" + v.slice(2);
+  e.target.value = v;
+});
+/* cvv apenas dígitos */
+document.getElementById("inp-cvv").addEventListener("input", e => {
+  e.target.value = e.target.value.replace(/\D/g, "").slice(0, 4);
+});
+/* contador de observações */
+document.getElementById("inp-obs").addEventListener("input", e => {
+  document.getElementById("obs-contador").textContent = e.target.value.length + "/140";
+});
+
+/* ================== INICIALIZAÇÃO ================== */
+
+(function init() {
+  const h = hojeISO();
+  const inpIn = document.getElementById("inp-checkin");
+  const inpOut = document.getElementById("inp-checkout");
+  inpIn.min = h;
+  inpOut.min = somarDias(h, 1);
+  inpIn.value = somarDias(h, 3);
+  inpOut.value = somarDias(h, 5);
+  inpIn.addEventListener("change", () => { inpOut.min = somarDias(inpIn.value || h, 1); });
+  popularExemplo();
+  desenharQR();
+  mostrarEtapa("datas");
+})();
+</script>
+</body>
+</html>

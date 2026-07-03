@@ -1,0 +1,9 @@
+{
+  "name": "booking-engine-demo",
+  "version": "1.0.0",
+  "description": "Demonstração de booking engine (motor de reservas) para hotéis: tarifas dinâmicas, prevenção de overbooking e simulação de canais OTA",
+  "private": true,
+  "scripts": {
+    "test": "node tests/logica.test.js"
+  }
+}
