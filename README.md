@@ -2,7 +2,7 @@
 
 Demonstração funcional de um booking engine (motor de reservas) para hotéis, construída em um único arquivo HTML, sem dependências e sem build. Abra o `index.html` no navegador e tudo funciona.
 
-**[Ver demonstração ao vivo](https://SEU-USUARIO.github.io/booking-engine-demo/)** (ative o GitHub Pages nas configurações do repositório)
+**[Ver demonstração ao vivo](https://booking-engine-demo.vercel.app)**
 
 ## O que a demo faz
 
